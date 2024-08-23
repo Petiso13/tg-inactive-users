@@ -19,27 +19,32 @@ target_group_name = ''
 day_limit = 21
 month_limit = 8
 year_limit = 2024 
-# Difference from UTC time zone in hours
-my_time_zone = -3 
 
 
 async def main():
 
     client = TelegramClient('anon', api_id, api_hash)
-    datetime_limit = datetime(year_limit, month_limit, day_limit, tzinfo=timezone.utc) + timedelta(hours=my_time_zone)
+    datetime_limit = datetime(year_limit, month_limit, day_limit, tzinfo=timezone.utc)
 
     await client.start()
     chats = await client.get_dialogs()
-    group_chat = list(filter(lambda chat: chat.name.startswith(target_group_name), chats))[0]
+    group_chat = list(filter(lambda chat: chat.name == target_group_name, chats))[0]
     all_members = await client.get_participants(group_chat)
-    all_members_id = list(map(lambda member: member.id, all_members))
-    for message in client.iter_messages(group_chat):
+    members_dict_id_to_username_name = dict()
+    for member in all_members:
+        members_dict_id_to_username_name[member.id] = [member.username, member.first_name]
+
+    async for message in client.iter_messages(group_chat):
         if datetime_limit <= message.date:
-
-            '''TODO'''
-
-    for member in members_id: 
-        print(member) 
+            if message.sender_id in members_dict_id_to_username_name:
+                del members_dict_id_to_username_name[message.sender_id]
+            if message.reactions:
+                for reaction in message.reactions.recent_reactions:
+                    if reaction.peer_id in members_dict_id_to_username_name:
+                        del members_dict_id_to_username_name[reaction.peer_id]
+        break
+    for member_id in members_dict_id_to_username_name: 
+        print(members_dict_id_to_username_name[member_id]) 
 
 
 asyncio.run(main())
