@@ -34,24 +34,56 @@ async def main():
 
     await client.start()
     chats = await client.get_dialogs()
-    group_chat = list(filter(lambda chat: chat.name.startswith(target_group_name), chats))[0]
+    group_chat = list(filter(lambda chat: chat.name == target_group_name, chats))[0]
     all_members = await client.get_participants(group_chat)
     members_dict_id_to_userinfo = dict()
     for member in all_members:
         members_dict_id_to_userinfo[member.id] = UserInfo(False, member.username, member.first_name)
-
     async for message in client.iter_messages(group_chat):
         if datetime_limit <= message.date:
-            members_dict_id_to_userinfo[message.sender_id].participated = True
+            if message._sender_id:
+                members_dict_id_to_userinfo[message._sender_id].participated = True
             if message.reactions:
                 for reaction in message.reactions.recent_reactions:
                     members_dict_id_to_userinfo[reaction.peer_id.user_id].participated = True
         else:
             break
-    for member_id in members_dict_id_to_userinfo: 
-        if not members_dict_id_to_userinfo[member_id].participated:
-            print(f'{members_dict_id_to_userinfo[member_id].username}, {members_dict_id_to_userinfo[member_id].name}')
-
+    members_to_kick = dict()
+    i = 1
+    for member_id, info in members_dict_id_to_userinfo.items():
+        if not info.participated:
+            members_to_kick[i] = (member_id, info)
+            i += 1
+    print('These are the inactive users:')
+    for index, id_and_info in members_to_kick.items():
+        print(f'{index}: {id_and_info[1].username}, {id_and_info[1].name}')
+    option = input('\nInsert 1 to kick all inactive users or 2 to make exceptions. Anything else will exit.\n--> ')
+    if option == '1':
+        for _, id_and_info in members_to_kick.items():
+            await client.edit_permissions(group_chat, id_and_info[0], view_messages=False)
+            await client.edit_permissions(group_chat, id_and_info[0])
+        print('Kicked inactive members successfully.')
+    elif option == '2':
+        exceptions = input('\nTo make exceptions, give list of numbers corresponding to users separated by commas. Hit enter to examine new list.\n--> ')
+        while True:
+            exceptions =  [int(number) for number in exceptions.replace(' ','').split(',')]
+            for number in exceptions:
+                del members_to_kick[number]
+            print('Members to be kicked:')
+            for index, id_and_info in members_to_kick.items():
+                print(f'{index}: {id_and_info[1].username}, {id_and_info[1].name}')
+            option = input('\nInsert 1 to kick all these inactive users or 2 to make more exceptions. Anything else will exit.\n--> ')
+            if option == '1':
+                for _, id_and_info in members_to_kick.items():
+                    await client.edit_permissions(group_chat, id_and_info[0], view_messages=False)
+                    await client.edit_permissions(group_chat, id_and_info[0])
+                print('Kicked inactive members successfully.')
+                break
+            elif option == '2':
+                exceptions = input('Give list of numbers corresponding to users separated by commas. Hit enter to examine new list.\n--> ')
+            else:
+                return
+    return
 
 asyncio.run(main())
 
