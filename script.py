@@ -2,10 +2,8 @@ import os
 import asyncio
 from dataclasses import dataclass
 from dotenv import load_dotenv
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone 
 from telethon import TelegramClient
-from telethon import utils
-from telethon import functions
 
 @dataclass
 class UserInfo:
@@ -16,8 +14,19 @@ class UserInfo:
 async def main():
 
     if load_dotenv():
-        api_id = os.getenv('API_ID')
-        api_hash = os.getenv('API_HASH')
+        answer = input('Would you like to use the same API id and API hash as the last time? Type [Y]es to confirm.')
+        if answer.lower() == 'y' or answer.lower() == 'yes':
+            api_id = os.getenv('API_ID')
+            api_hash = os.getenv('API_HASH')
+        else:
+            api_id = input('Please enter your API id\n')
+            api_hash = input('Please enter your API hash\n')
+            answer = input('Would you like to override your .env file with the new data? Type [Y]es to confirm.')
+            if answer.lower() == 'y' or answer.lower() == 'yes':
+                os.remove('.env')
+                with open('.env', 'w') as file:
+                    file.writelines(f'API_ID = {api_id}\n', f'API_HASH = {api_hash}\n')
+                print('Your .env file has been overridden.')
     else:
         print('You have no .env file, one will be created to store your Telegram app data for future use.')
         with open('.env', 'w') as file:
@@ -26,7 +35,7 @@ async def main():
             file.writelines(f'API_ID = {api_id}\n', f'API_HASH = {api_hash}\n')
     client = TelegramClient('anon', api_id, api_hash)
     target_group_name = input('Please enter the group name you would like me to scan.\n--> ')
-    print('Up until when would you like me to scan?', end=' ')
+    print('Back until when would you like me to scan?', end=' ')
     year_limit = int(input('Please enter the year.\n--> ')) 
     month_limit = int(input('Please enter the month.\n--> ')) 
     day_limit = int(input('Please enter the day.\n--> ')) 
